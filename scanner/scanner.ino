@@ -46,60 +46,37 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
     sendMessage(ad);
   }  
 };
-void setup() {
- 
+void setup() { 
   Serial.begin(115200);
-  Serial.println();
- 
-  WiFi.begin(ssid, password);
- 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Connecting to WiFi..");
-  }
- 
-  Serial.println("Connected to the WiFi network");
- 
+  Serial.println("Starting BLE to MQTT scanner");
+  connect_wifi(); 
   client.setServer(mqttServer, mqttPort);
- 
-  while (!client.connected()) {
-    Serial.println("Connecting to MQTT...");
- 
-    if (client.connect("ESP32Client", mqttUser, mqttPassword )) {
- 
-      Serial.println("connected");
- 
-    } else {
- 
-      Serial.print("failed with state ");
-      Serial.print(client.state());
-      delay(2000);
- 
-    }
-  }
-  setupBLE();
- 
+  connect_mqtt();
+  setup_ble(); 
 }
 
-void reconnect(){
+void connect_mqtt(){
   while (!client.connected()) {
-    Serial.println("Connecting to MQTT...");
- 
-    if (client.connect("ESP32Client", mqttUser, mqttPassword )) {
- 
-      Serial.println("connected");
- 
-    } else {
- 
+    Serial.println("Connecting to MQTT..."); 
+    if (client.connect("ESP32Client", mqttUser, mqttPassword )) { 
+      Serial.println("connected"); 
+    } else { 
       Serial.print("failed with state ");
-      Serial.print(client.state());
-      delay(2000);
- 
+      Serial.println(client.state());
+      delay(2000); 
     }
   }  
 }
 
-void setupBLE() {
+void connect_wifi(){
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  } 
+  Serial.println("Connected to the WiFi network");
+}
+void setup_ble() {
   BLEDevice::init("");
   pClient = BLEDevice::createClient();
   pBLEScan = BLEDevice::getScan();
@@ -108,9 +85,13 @@ void setupBLE() {
 }
 
 void loop() {
-
-  BLEScanResults scanResults = pBLEScan->start(3); 
+  BLEScanResults scanResults = pBLEScan->start(3);
+  if(WiFi.status() != WL_CONNECTED) {
+    Serial.println("Retrying to connect WiFi..");
+    connect_wifi();
+  }  
   if(!client.connected()){
-    reconnect();  
+    Serial.println("Retrying to connect to MQTT Server..");
+    connect_mqtt();  
   }
 }
