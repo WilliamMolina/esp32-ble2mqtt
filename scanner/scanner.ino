@@ -2,6 +2,8 @@
 #include <BLEDevice.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include "soc/timer_group_struct.h"
+#include "soc/timer_group_reg.h"
  
 const char* ssid = "******";
 const char* password =  "********";
@@ -19,10 +21,9 @@ void sendMessage(BLEAdvertisedDevice ad){
   String topic = "happy-bubbles/ble/living-room/raw/";
   StaticJsonBuffer<300> JSONbuffer;
   JsonObject& JSONencoder = JSONbuffer.createObject(); 
-  JSONencoder["hostname"] = "door";
+  JSONencoder["hostname"] = "home";
   JSONencoder["mac"] = ad.getAddress().toString().c_str();
   JSONencoder["rssi"] = ad.getRSSI();;
-  //JSONencoder["is_scan_response"] = "1";
   JSONencoder["type"] = "3";
   char JSONmessageBuffer[200];
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
@@ -85,7 +86,12 @@ void setup_ble() {
 }
 
 void loop() {
-  BLEScanResults scanResults = pBLEScan->start(3);
+  TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
+  TIMERG0.wdt_feed=1;
+  TIMERG0.wdt_wprotect=0;
+  BLEScanResults scanResults = pBLEScan->start(30);
+  //esp_sleep_enable_timer_wakeup(60 * 1000000);
+  //esp_deep_sleep_start();
   if(WiFi.status() != WL_CONNECTED) {
     Serial.println("Retrying to connect WiFi..");
     connect_wifi();
