@@ -4,7 +4,10 @@
 #include <PubSubClient.h>
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
- 
+#include "esp_pm.h"
+#include "esp32/pm.h"
+#include "esp32-hal-cpu.h"
+
 const char* ssid = "******";
 const char* password =  "********";
 const char* mqttServer = "xxx.xxx.xxx.xxx";
@@ -29,7 +32,7 @@ void sendMessage(BLEAdvertisedDevice ad){
   JSONencoder.printTo(JSONmessageBuffer, sizeof(JSONmessageBuffer));
   Serial.println("Sending message to MQTT topic..");
   Serial.println(JSONmessageBuffer); 
-  client.loop();
+  //client.loop();
   Serial.println("-------------");
   topic.concat(ad.getAddress().toString().c_str());
   if (client.publish(topic.c_str(), JSONmessageBuffer) == true) {
@@ -48,8 +51,11 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   }  
 };
 void setup() { 
+  setCpuFrequencyMhz(80);
   Serial.begin(115200);
   Serial.println("Starting BLE to MQTT scanner");
+  Serial.print("Frecuencia: ");
+  Serial.println(getCpuFrequencyMhz());
   connect_wifi(); 
   client.setServer(mqttServer, mqttPort);
   connect_mqtt();
@@ -64,7 +70,6 @@ void connect_mqtt(){
     } else { 
       Serial.print("failed with state ");
       Serial.println(client.state());
-      delay(2000); 
     }
   }  
 }
@@ -75,6 +80,7 @@ void connect_wifi(){
     delay(500);
     Serial.println("Connecting to WiFi..");
   } 
+  Serial.println(WiFi.localIP());
   Serial.println("Connected to the WiFi network");
 }
 void setup_ble() {
@@ -86,12 +92,17 @@ void setup_ble() {
 }
 
 void loop() {
-  TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
-  TIMERG0.wdt_feed=1;
-  TIMERG0.wdt_wprotect=0;
-  BLEScanResults scanResults = pBLEScan->start(30);
+  //TIMERG0.wdt_wprotect=TIMG_WDT_WKEY_VALUE;
+  //TIMERG0.wdt_feed=1;
+  //TIMERG0.wdt_wprotect=0;
+  BLEScanResults scanResults = pBLEScan->start(31);
   //esp_sleep_enable_timer_wakeup(60 * 1000000);
   //esp_deep_sleep_start();
+  rtc_cpu_freq_t freq = rtc_clk_cpu_freq_get();
+  Serial.print("Frecuencia: ");
+  Serial.println(freq);
+  Serial.println("Scanning...");
+  //delay(3000);
   if(WiFi.status() != WL_CONNECTED) {
     Serial.println("Retrying to connect WiFi..");
     connect_wifi();
